@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  incidentiq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: incidentiq-app
+    ports:
+      - "8000:8000"
+      - "3000:3000"
+    environment:
+      - HINDSIGHT_URL=http://hindsight:8888
+      - HINDSIGHT_BANK_ID=team-payments
+      - LLM_PROVIDER=auto
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DATABASE_PATH=incident_iq.db
+    volumes:
+      - ./data:/app/data
+      - sqlite_data:/app/db_data
+    depends_on:
+      - hindsight
+    restart: unless-stopped
+
+  hindsight:
+    image: vectorize/hindsight:latest
+    container_name: hindsight-memory-server
+    ports:
+      - "8888:8888"
+    environment:
+      - HINDSIGHT_PORT=8888
+      - HINDSIGHT_DEFAULT_BANK=team-payments
+    volumes:
+      - hindsight_storage:/var/lib/hindsight
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
+  hindsight_storage:

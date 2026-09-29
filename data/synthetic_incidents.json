@@ -1,0 +1,884 @@
+[
+  {
+    "id": "INC-1001",
+    "timestamp": "2026-09-01T08:14:22Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Container memory limit exceeded (511Mi/512Mi)",
+    "logs": [
+      "2026-09-01T08:14:18.102Z [main] ERROR com.fintech.payment.Worker - java.lang.OutOfMemoryError: Java heap space",
+      "2026-09-01T08:14:20.401Z [k8s-node-3] WARNING kubelet - Container payment-service-7f89b-x92zk killed: exit code 137 (OOMKilled)",
+      "2026-09-01T08:14:21.000Z [k8s-node-3] INFO kubelet - Restarting container with backoff 10s"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 535822336,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 94.2,
+      "kafka_lag": 1420,
+      "p99_latency_ms": 1850.0,
+      "gc_pause_ms": 4200.0,
+      "active_threads": 84,
+      "connection_pool_active": 8,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "Uncharacterized heap exhaustion during scheduled bulk batch ingestion.",
+    "recommended_fix": "Capture JVM heap dump and analyze memory profile; temporarily restart pod.",
+    "time_to_resolve_minutes": 55,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "exit-137", "cold-start"],
+    "description": "Interaction 1: Cold start baseline. Agent has zero memories in Hindsight bank."
+  },
+  {
+    "id": "INC-1002",
+    "timestamp": "2026-09-03T14:22:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Pod memory limit exceeded (511Mi/512Mi)",
+    "logs": [
+      "2026-09-03T14:21:44.210Z [kafka-consumer-0] ERROR c.f.p.b.BatchProcessor - OutOfMemoryError: Java heap space",
+      "2026-09-03T14:21:58.000Z [kubelet] Pod payment-service-6b45f-lm92d terminated with exit code 137",
+      "2026-09-03T14:21:59.100Z [kubelet] Container memory limit: 512Mi, RSS usage: 511.8Mi"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 536100000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 89.0,
+      "kafka_lag": 8420,
+      "p99_latency_ms": 2100.0,
+      "gc_pause_ms": 5100.0,
+      "active_threads": 110,
+      "connection_pool_active": 12,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "c8f12a9",
+        "author": "dave-backend",
+        "message": "perf(payments): increase settlement throughput via batch size bump",
+        "timestamp": "2026-09-03T14:05:00Z",
+        "config_changes": {
+          "PAYMENT_BATCH_SIZE": 3000
+        }
+      }
+    ],
+    "root_cause": "Deploy commit c8f12a9 increased PAYMENT_BATCH_SIZE to 3000, exceeding 512Mi heap allocation.",
+    "recommended_fix": "Rollback PAYMENT_BATCH_SIZE config to 500 and restart pods.",
+    "time_to_resolve_minutes": 35,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "recent-deploy", "batch-size"],
+    "description": "Historical incident establishing batch size correlation with OOMKilled crashes."
+  },
+  {
+    "id": "INC-1003",
+    "timestamp": "2026-09-05T09:11:00Z",
+    "service": "payment-service",
+    "severity": "P2-HIGH",
+    "alert_text": "PaymentServiceHighGC - Stop-the-world GC pauses exceeding 3000ms",
+    "logs": [
+      "2026-09-05T09:10:12.330Z [gc] GC(42) Pause Young (Normal) (G1 Evacuation Pause) 3214ms",
+      "2026-09-05T09:10:45.100Z [gc] GC(43) Pause Full (System.gc()) 4820ms"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 480000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 98.1,
+      "kafka_lag": 5100,
+      "p99_latency_ms": 3400.0,
+      "gc_pause_ms": 4820.0,
+      "active_threads": 95,
+      "connection_pool_active": 10,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "G1GC heap fragmentation under high object turnover.",
+    "recommended_fix": "Add JVM arguments: -XX:+UseG1GC -XX:InitiatingHeapOccupancyPercent=45 -XX:G1ReservePercent=15",
+    "time_to_resolve_minutes": 40,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "gc-pause", "legacy-jvm", "g1gc"],
+    "description": "Legacy JVM tuning incident. Fix becomes obsolete after Java 21 migration."
+  },
+  {
+    "id": "INC-1004",
+    "timestamp": "2026-09-07T11:45:00Z",
+    "service": "auth-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "AuthServiceDbTimeout - HikariPool-1 connection timeout cascade",
+    "logs": [
+      "2026-09-07T11:44:30.100Z [http-nio-8080-exec-4] ERROR com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Connection is not available, request timed out after 30000ms.",
+      "2026-09-07T11:44:32.200Z [http-nio-8080-exec-5] ERROR c.f.a.s.TokenService - Failed to obtain connection for user session verification"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 310000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 45.0,
+      "kafka_lag": 0,
+      "p99_latency_ms": 30050.0,
+      "gc_pause_ms": 45.0,
+      "active_threads": 250,
+      "connection_pool_active": 20,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "Database connection pool starvation. HikariPool-1 max-pool-size (20) saturated by long-running queries.",
+    "recommended_fix": "Increase max-pool-size from 20 to 50 in application-prod.yml and restart auth-service.",
+    "time_to_resolve_minutes": 20,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["auth-service", "db-connection-failure", "hikaripool", "timeout"],
+    "description": "Historical memory of database connection pool exhaustion."
+  },
+  {
+    "id": "INC-1005",
+    "timestamp": "2026-09-10T16:04:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Pod memory limit exceeded (511Mi/512Mi)",
+    "logs": [
+      "2026-09-10T16:03:40.892Z [batch-worker-1] ERROR com.fintech.payment.Worker - java.lang.OutOfMemoryError: Java heap space",
+      "2026-09-10T16:03:55.102Z [kubelet] Container payment-service killed exit code 137 (OOMKilled)",
+      "2026-09-10T16:03:56.000Z [kubelet] Memory usage reached 511.9Mi of 512Mi limit"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 536200000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 91.5,
+      "kafka_lag": 12400,
+      "p99_latency_ms": 2400.0,
+      "gc_pause_ms": 6200.0,
+      "active_threads": 128,
+      "connection_pool_active": 14,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "a4d92ef",
+        "author": "mike-senior-dev",
+        "message": "feat(settlement): boost chunk processing speed",
+        "timestamp": "2026-09-10T15:48:00Z",
+        "config_changes": {
+          "PAYMENT_BATCH_SIZE": 5000
+        }
+      }
+    ],
+    "root_cause": "Commit a4d92ef increased PAYMENT_BATCH_SIZE to 5000 right before OOM crash, replicating INC-1002.",
+    "recommended_fix": "Rollback PAYMENT_BATCH_SIZE config to 500. Requires prod approval gate.",
+    "time_to_resolve_minutes": 12,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "recent-deploy", "batch-size"],
+    "description": "Interaction 5: Agent recalls INC-1002, correlates batch size deploy, and enforces approval gate!"
+  },
+  {
+    "id": "INC-1006",
+    "timestamp": "2026-09-12T13:20:00Z",
+    "service": "order-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "OrderServiceCrashLoop - Bad deployment NullPointerException",
+    "logs": [
+      "2026-09-12T13:19:40.100Z [main] ERROR org.springframework.boot.SpringApplication - Application run failed",
+      "java.lang.NullPointerException: Cannot invoke 'String.trim()' because 'apiKey' is null"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 120000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 12.0,
+      "kafka_lag": 500,
+      "p99_latency_ms": 0.0,
+      "gc_pause_ms": 0.0,
+      "active_threads": 10,
+      "connection_pool_active": 0,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "f104b9c",
+        "author": "intern-dev",
+        "message": "fix: update third party api auth headers",
+        "timestamp": "2026-09-12T13:15:00Z",
+        "config_changes": {
+          "PAYMENT_GATEWAY_API_KEY": ""
+        }
+      }
+    ],
+    "root_cause": "Missing environment variable in deployment manifest caused immediate application bootstrap crash.",
+    "recommended_fix": "Rollback release deployment to previous revision v1.9.3.",
+    "time_to_resolve_minutes": 8,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["order-service", "bad-deployment", "rollback", "crashloop"],
+    "description": "Historical memory of bad deployment and manifest rollback."
+  },
+  {
+    "id": "INC-1007",
+    "timestamp": "2026-09-14T10:15:00Z",
+    "service": "payment-service",
+    "severity": "P2-HIGH",
+    "alert_text": "PaymentServiceKafkaLag - Consumer lag exceeding 25000 messages",
+    "logs": [
+      "2026-09-14T10:14:22.000Z [kafka-consumer] WARN c.f.p.k.KafkaListener - Consumer poll interval exceeded 300000ms",
+      "2026-09-14T10:14:30.000Z [kafka-consumer] INFO o.a.k.c.c.i.ConsumerCoordinator - Revoking previously assigned partitions"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 410000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 82.0,
+      "kafka_lag": 26800,
+      "p99_latency_ms": 1100.0,
+      "gc_pause_ms": 800.0,
+      "active_threads": 90,
+      "connection_pool_active": 15,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "Slow third-party banking gateway responses blocked consumer poll loop.",
+    "recommended_fix": "Configure asynchronous Kafka worker execution with dead-letter retry topic.",
+    "time_to_resolve_minutes": 45,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "kafka-lag", "consumer-rebalance"],
+    "description": "Kafka consumer starvation without container OOM."
+  },
+  {
+    "id": "INC-1008",
+    "timestamp": "2026-09-15T18:00:00Z",
+    "service": "billing-worker",
+    "severity": "P2-HIGH",
+    "alert_text": "BillingWorkerLivenessFailed - Pod restart loop during startup",
+    "logs": [
+      "2026-09-15T17:59:10.000Z [kubelet] Liveness probe failed: HTTP probe failed with statuscode: 503",
+      "2026-09-15T17:59:15.000Z [kubelet] Killing container billing-worker"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 350000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 99.0,
+      "kafka_lag": 400,
+      "p99_latency_ms": 0.0,
+      "gc_pause_ms": 200.0,
+      "active_threads": 40,
+      "connection_pool_active": 5,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "Liveness probe initialDelaySeconds (10s) too aggressive during heavy Spring context bootstrap.",
+    "recommended_fix": "Increase initialDelaySeconds to 60s in Kubernetes deployment livenessProbe spec.",
+    "time_to_resolve_minutes": 15,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["billing-worker", "liveness-probe", "k8s-restart"],
+    "description": "Kubernetes liveness probe tuning."
+  },
+  {
+    "id": "INC-1009",
+    "timestamp": "2026-09-16T11:05:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceDbTimeout - HikariPool-1 connection request timed out after 30000ms",
+    "logs": [
+      "2026-09-16T11:04:12.441Z [http-nio-8080-exec-12] ERROR com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Connection is not available, request timed out after 30000ms.",
+      "2026-09-16T11:04:15.000Z [http-nio-8080-exec-14] ERROR c.f.p.d.LedgerRepository - Failed to acquire database lock for debit account"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 420000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 74.0,
+      "kafka_lag": 9100,
+      "p99_latency_ms": 30000.0,
+      "gc_pause_ms": 400.0,
+      "active_threads": 220,
+      "connection_pool_active": 20,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "Scheduled reconciliation job ran concurrently with daytime transactions, saturating all 20 DB connections.",
+    "recommended_fix": "Increase maximum-pool-size to 40 and isolate batch jobs to read-replica datasource.",
+    "time_to_resolve_minutes": 25,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "hikaripool", "db-connection-failure", "pool-exhaustion"],
+    "description": "Database connection pool saturation in payment-service."
+  },
+  {
+    "id": "INC-1010",
+    "timestamp": "2026-09-18T15:30:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Container memory limit exceeded (511Mi/512Mi)",
+    "logs": [
+      "2026-09-18T15:29:40.111Z [main] ERROR com.fintech.payment.Worker - java.lang.OutOfMemoryError: Java heap space",
+      "2026-09-18T15:29:55.000Z [kubelet] Pod payment-service terminated with exit code 137"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 536000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 90.0,
+      "kafka_lag": 11200,
+      "p99_latency_ms": 2300.0,
+      "gc_pause_ms": 5800.0,
+      "active_threads": 120,
+      "connection_pool_active": 15,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "e9b2104",
+        "author": "mike-senior-dev",
+        "message": "fix: attempt larger batch size for night settlement",
+        "timestamp": "2026-09-18T15:10:00Z",
+        "config_changes": {
+          "PAYMENT_BATCH_SIZE": 6000
+        }
+      }
+    ],
+    "root_cause": "Commit e9b2104 increased PAYMENT_BATCH_SIZE to 6000, causing immediate OOMKilled exit 137.",
+    "recommended_fix": "Rollback PAYMENT_BATCH_SIZE to 500 baseline.",
+    "time_to_resolve_minutes": 10,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "recent-deploy", "batch-size"],
+    "description": "Reinforcing memory pattern: batch size changes cause OOMs."
+  },
+  {
+    "id": "INC-1011",
+    "timestamp": "2026-09-19T09:40:00Z",
+    "service": "auth-service",
+    "severity": "P2-HIGH",
+    "alert_text": "AuthServiceLatency - Token verification latency spike",
+    "logs": [
+      "2026-09-19T09:39:10.000Z [auth-worker] WARN c.f.a.c.RedisCache - Redis connection timeout, falling back to database query"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 280000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 65.0,
+      "kafka_lag": 0,
+      "p99_latency_ms": 1950.0,
+      "gc_pause_ms": 120.0,
+      "active_threads": 180,
+      "connection_pool_active": 18,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "Redis memory eviction under spike caused cache miss storm to database.",
+    "recommended_fix": "Increase Redis cluster cache memory ceiling and enable keyspace notifications.",
+    "time_to_resolve_minutes": 18,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["auth-service", "redis", "cache-miss"],
+    "description": "Redis cache eviction storm."
+  },
+  {
+    "id": "INC-1012",
+    "timestamp": "2026-09-20T12:00:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Pod memory limit exceeded (511Mi/512Mi)",
+    "logs": [
+      "2026-09-20T11:59:45.102Z [kafka-consumer-2] ERROR com.fintech.payment.Worker - java.lang.OutOfMemoryError: Java heap space",
+      "2026-09-20T11:59:58.000Z [kubelet] Pod payment-service-89cde-9zk4p killed: exit code 137 (OOMKilled)",
+      "2026-09-20T12:00:01.000Z [kafka-broker-1] WARN KafkaConsumerLag - Consumer lag for topic 'payment-inbound' exceeded 48,213 records"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 536100000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 98.7,
+      "kafka_lag": 48213,
+      "p99_latency_ms": 1420.0,
+      "gc_pause_ms": 4900.0,
+      "active_threads": 290,
+      "connection_pool_active": 19,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "External Flash Sale traffic surge flooded consumer queue with 48,213 messages. NO deploy occurred.",
+    "recommended_fix": "Scale payment-service HorizontalPodAutoscaler minReplicas from 2 to 6 and increase memory limit to 1024Mi. DO NOT rollback code.",
+    "time_to_resolve_minutes": 11,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "traffic-surge", "near-duplicate-a", "no-deploy"],
+    "description": "Interaction 12 (Disambiguation Near-Duplicate A): Exact same OOM alert signature, but live metrics show NO deploy and huge Kafka lag (48,213). Must scale pods, NOT rollback!"
+  },
+  {
+    "id": "INC-1013",
+    "timestamp": "2026-09-21T10:15:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Pod memory limit exceeded (511Mi/512Mi)",
+    "logs": [
+      "2026-09-21T10:14:48.000Z [batch-executor-3] ERROR com.fintech.payment.Worker - java.lang.OutOfMemoryError: Java heap space",
+      "2026-09-21T10:15:00.000Z [kubelet] Pod payment-service killed exit code 137 (OOMKilled)"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 536000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 88.0,
+      "kafka_lag": 140,
+      "p99_latency_ms": 1800.0,
+      "gc_pause_ms": 5200.0,
+      "active_threads": 115,
+      "connection_pool_active": 11,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "b2c918a",
+        "author": "mike-senior-dev",
+        "message": "chore(config): adjust PAYMENT_BATCH_SIZE for end-of-quarter",
+        "timestamp": "2026-09-21T09:55:00Z",
+        "config_changes": {
+          "PAYMENT_BATCH_SIZE": 4500
+        }
+      }
+    ],
+    "root_cause": "Deploy commit b2c918a raised PAYMENT_BATCH_SIZE to 4500 with steady-state traffic.",
+    "recommended_fix": "Rollback PAYMENT_BATCH_SIZE to 500.",
+    "time_to_resolve_minutes": 8,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "near-duplicate-b", "recent-deploy"],
+    "description": "Near-duplicate B: Identical OOM alert signature, but caused by deploy batch size, requiring rollback."
+  },
+  {
+    "id": "INC-1014",
+    "timestamp": "2026-09-22T14:30:00Z",
+    "service": "payment-service",
+    "severity": "P2-HIGH",
+    "alert_text": "PaymentServiceGCWarning - Elevated GC Pause Time",
+    "logs": [
+      "2026-09-22T14:29:10.000Z [gc] GC(88) Pause Young (Normal) (G1 Evacuation Pause) 2890ms"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 460000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 84.0,
+      "kafka_lag": 3200,
+      "p99_latency_ms": 1900.0,
+      "gc_pause_ms": 2890.0,
+      "active_threads": 105,
+      "connection_pool_active": 12,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "G1GC pause degradation on Java 17 prior to Java 21 migration.",
+    "recommended_fix": "Historical fix: tune G1GC parameters (later obsolete).",
+    "time_to_resolve_minutes": 30,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "gc-pause", "legacy-jvm"],
+    "description": "Final Java 17 GC incident before platform migration."
+  },
+  {
+    "id": "INC-1015",
+    "timestamp": "2026-09-23T11:10:00Z",
+    "service": "fraud-detection",
+    "severity": "P2-HIGH",
+    "alert_text": "FraudConsumerBacklog - Kafka consumer lag 35,000",
+    "logs": [
+      "2026-09-23T11:09:40.000Z [fraud-evaluator] ERROR c.f.f.EvaluationEngine - Deserialization exception on transaction event: unknown schema version 3"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 380000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 40.0,
+      "kafka_lag": 35200,
+      "p99_latency_ms": 200.0,
+      "gc_pause_ms": 50.0,
+      "active_threads": 50,
+      "connection_pool_active": 5,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "d14f901",
+        "author": "fraud-team",
+        "message": "feat(fraud): upgrade schema registry client",
+        "timestamp": "2026-09-23T10:45:00Z",
+        "config_changes": {}
+      }
+    ],
+    "root_cause": "Schema registry mismatch in commit d14f901 causing poisoned messages in Kafka partition.",
+    "recommended_fix": "Revert schema registry client upgrade to version 2.1.0.",
+    "time_to_resolve_minutes": 14,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["fraud-detection", "kafka", "schema-mismatch"],
+    "description": "Fraud consumer poison pill schema mismatch."
+  },
+  {
+    "id": "INC-1016",
+    "timestamp": "2026-09-24T09:00:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Pod memory limit exceeded (511Mi/512Mi)",
+    "logs": [
+      "2026-09-24T08:59:30.000Z [main] ERROR com.fintech.payment.Worker - OutOfMemoryError: Java heap space",
+      "2026-09-24T08:59:58.000Z [kubelet] Pod payment-service killed exit code 137"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 536100000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 90.0,
+      "kafka_lag": 9500,
+      "p99_latency_ms": 2200.0,
+      "gc_pause_ms": 5400.0,
+      "active_threads": 120,
+      "connection_pool_active": 13,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "aa39120",
+        "author": "dave-backend",
+        "message": "perf: bump batch size to 4000",
+        "timestamp": "2026-09-24T08:40:00Z",
+        "config_changes": {
+          "PAYMENT_BATCH_SIZE": 4000
+        }
+      }
+    ],
+    "root_cause": "Batch size 4000 exceeded heap. Deploy config rollback to safe baseline (500) resolved OOM.",
+    "recommended_fix": "Rollback deploy config PAYMENT_BATCH_SIZE to safe baseline (500).",
+    "time_to_resolve_minutes": 15,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "recent-deploy", "rollback-verified"],
+    "description": "Historical incident where deploy batch size bump caused OOM and config rollback resolved it."
+  },
+  {
+    "id": "INC-1025",
+    "timestamp": "2026-09-24T09:15:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Pod memory limit exceeded (511Mi/512Mi)",
+    "logs": [
+      "2026-09-24T09:14:30.000Z [main] ERROR com.fintech.payment.Worker - OutOfMemoryError: Java heap space",
+      "2026-09-24T09:14:58.000Z [kubelet] Pod payment-service killed exit code 137"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 536100000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 90.0,
+      "kafka_lag": 9500,
+      "p99_latency_ms": 2200.0,
+      "gc_pause_ms": 5400.0,
+      "active_threads": 120,
+      "connection_pool_active": 13,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "aa39120",
+        "author": "dave-backend",
+        "message": "perf: bump batch size to 4000",
+        "timestamp": "2026-09-24T08:40:00Z",
+        "config_changes": {
+          "PAYMENT_BATCH_SIZE": 4000
+        }
+      }
+    ],
+    "root_cause": "Batch size 4000 exceeded heap. Simple pod restart was attempted without rollback and FAILED; pod re-crashed in 3 mins.",
+    "recommended_fix": "Simple pod restart without config rollback",
+    "time_to_resolve_minutes": 15,
+    "engineer_name": "sarah-oncall",
+    "outcome": "failed",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "rejected-fix", "pod-restart-failed"],
+    "description": "Historical incident where simple pod restart was attempted and failed; pod re-crashed in 3 minutes."
+  },
+  {
+    "id": "INC-1017",
+    "timestamp": "2026-09-25T16:20:00Z",
+    "service": "billing-worker",
+    "severity": "P2-HIGH",
+    "alert_text": "BillingWorkerOOM - Java heap space in PDF invoice rendering",
+    "logs": [
+      "2026-09-25T16:19:40.000Z [pdf-renderer] ERROR c.f.b.p.PdfGenerator - java.lang.OutOfMemoryError: Java heap space during ByteArrayOutputStream expansion"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 520000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 85.0,
+      "kafka_lag": 200,
+      "p99_latency_ms": 5400.0,
+      "gc_pause_ms": 3200.0,
+      "active_threads": 30,
+      "connection_pool_active": 4,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "In-memory buffering of 100,000 corporate billing invoices into a single byte array.",
+    "recommended_fix": "Stream PDF chunks directly to S3 multipart upload instead of accumulating in RAM.",
+    "time_to_resolve_minutes": 35,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["billing-worker", "pdf-render", "heap-space"],
+    "description": "Billing worker in-memory PDF generation memory leak."
+  },
+  {
+    "id": "INC-1018",
+    "timestamp": "2026-09-26T10:00:00Z",
+    "service": "payment-service",
+    "severity": "P3-MEDIUM",
+    "alert_text": "PaymentServicePlatformMigration - Upgraded to Java 21 ZGC",
+    "logs": [
+      "2026-09-26T09:55:00.000Z [platform] INFO OpenJDK 64-Bit Server VM (build 21.0.3+9-LTS) started with ZGC",
+      "2026-09-26T09:55:01.000Z [platform] NOTICE: Legacy flags -XX:+UseG1GC and -XX:InitiatingHeapOccupancyPercent are now deprecated/ignored."
+    ],
+    "metrics": {
+      "memory_rss_bytes": 350000000,
+      "memory_limit_bytes": 786432000,
+      "cpu_percent": 35.0,
+      "kafka_lag": 100,
+      "p99_latency_ms": 15.0,
+      "gc_pause_ms": 1.2,
+      "active_threads": 120,
+      "connection_pool_active": 10,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "j21migr8",
+        "author": "platform-team",
+        "message": "feat(platform): migrate payment-service to Java 21 ZGC & bump memory limit to 768Mi",
+        "timestamp": "2026-09-26T09:40:00Z",
+        "config_changes": {
+          "JDK_VERSION": "21",
+          "GC_ALGORITHM": "ZGC",
+          "MEMORY_LIMIT": "768Mi"
+        }
+      }
+    ],
+    "root_cause": "Platform migration milestone. Legacy G1GC tuning fixes marked OBSOLETE.",
+    "recommended_fix": "Mark legacy G1GC tuning as obsolete in memory bank; enforce ZGC parameters.",
+    "time_to_resolve_minutes": 10,
+    "engineer_name": "lead-architect",
+    "outcome": "obsolete",
+    "is_simulated": true,
+    "tags": ["payment-service", "platform-migration", "java-21", "obsolete-fix"],
+    "description": "Crucial platform migration event where legacy G1GC tuning fix is formally marked obsolete."
+  },
+  {
+    "id": "INC-1019",
+    "timestamp": "2026-09-27T08:15:00Z",
+    "service": "notification-service",
+    "severity": "P3-MEDIUM",
+    "alert_text": "NotificationTimeout - Email dispatch backlog",
+    "logs": [
+      "2026-09-27T08:14:10.000Z [smtp-dispatcher] ERROR org.apache.commons.mail - SocketTimeoutException: Connect timed out to smtp.provider.com"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 220000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 30.0,
+      "kafka_lag": 4200,
+      "p99_latency_ms": 15000.0,
+      "gc_pause_ms": 40.0,
+      "active_threads": 60,
+      "connection_pool_active": 5,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "Third party SMTP relay throttling connections.",
+    "recommended_fix": "Switch notification provider to HTTP REST API webhook endpoint.",
+    "time_to_resolve_minutes": 25,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["notification-service", "smtp", "timeout"],
+    "description": "Notification service SMTP socket timeout."
+  },
+  {
+    "id": "INC-1020",
+    "timestamp": "2026-09-28T09:30:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Pod memory limit exceeded (765Mi/768Mi)",
+    "logs": [
+      "2026-09-28T09:29:45.102Z [settlement-worker-4] ERROR com.fintech.payment.Worker - java.lang.OutOfMemoryError: Java heap space",
+      "2026-09-28T09:29:58.000Z [kubelet] Pod payment-service-j21-99k killed exit code 137 (OOMKilled)"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 802160640,
+      "memory_limit_bytes": 805306368,
+      "cpu_percent": 93.0,
+      "kafka_lag": 7800,
+      "p99_latency_ms": 1650.0,
+      "gc_pause_ms": 2.5,
+      "active_threads": 140,
+      "connection_pool_active": 16,
+      "connection_pool_max": 25
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "c7104b2",
+        "author": "mike-senior-dev",
+        "message": "feat(batch): set PAYMENT_BATCH_SIZE to 5000 on Java 21",
+        "timestamp": "2026-09-28T09:10:00Z",
+        "config_changes": {
+          "PAYMENT_BATCH_SIZE": 5000
+        }
+      }
+    ],
+    "root_cause": "Commit c7104b2 increased batch size to 5000. Agent detects historical G1GC fix is obsolete, recommends modern batch rollback.",
+    "recommended_fix": "Bypass obsolete G1GC tuning; rollback PAYMENT_BATCH_SIZE to 1000 and enable dynamic batch throttling.",
+    "time_to_resolve_minutes": 5,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "interaction-20", "obsolete-correction-verified"],
+    "description": "Interaction 20 (Mastery): Agent spots obsolete historical fix, avoids it, applies modern batch rollback with HIGH confidence!"
+  },
+  {
+    "id": "INC-1021",
+    "timestamp": "2026-09-28T10:45:00Z",
+    "service": "payment-service",
+    "severity": "P2-HIGH",
+    "alert_text": "PaymentServiceLockContention - Deadlock detected on accounts table",
+    "logs": [
+      "2026-09-28T10:44:12.000Z [db-worker] ERROR org.hibernate.engine.jdbc.spi.SqlExceptionHelper - Deadlock found when trying to get lock; try restarting transaction"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 450000000,
+      "memory_limit_bytes": 805306368,
+      "cpu_percent": 55.0,
+      "kafka_lag": 1800,
+      "p99_latency_ms": 4200.0,
+      "gc_pause_ms": 3.0,
+      "active_threads": 110,
+      "connection_pool_active": 20,
+      "connection_pool_max": 25
+    },
+    "deploy_events": [],
+    "root_cause": "Pessimistic row locking order inconsistency during simultaneous refund and capture.",
+    "recommended_fix": "Enforce strict alphabetical account ID sorting before acquiring multi-row locks.",
+    "time_to_resolve_minutes": 15,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "db-deadlock", "locking"],
+    "description": "Database deadlock contention."
+  },
+  {
+    "id": "INC-1022",
+    "timestamp": "2026-09-28T11:30:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Netty Direct Memory buffer leak",
+    "logs": [
+      "2026-09-28T11:29:40.000Z [reactor-http-nio-4] ERROR io.netty.util.internal.PlatformDependent - OutOfDirectMemoryError: failed to allocate 16777216 byte(s) of direct memory",
+      "2026-09-28T11:29:55.000Z [kubelet] Pod payment-service killed exit code 137"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 804000000,
+      "memory_limit_bytes": 805306368,
+      "cpu_percent": 80.0,
+      "kafka_lag": 3400,
+      "p99_latency_ms": 1200.0,
+      "gc_pause_ms": 1.5,
+      "active_threads": 80,
+      "connection_pool_active": 8,
+      "connection_pool_max": 25
+    },
+    "deploy_events": [],
+    "root_cause": "Netty DirectByteBuf leak in webhooks handler under unreleased response payload buffers.",
+    "recommended_fix": "Add ReferenceCountUtil.release() in WebhookHandler.java channelRead0 finally block.",
+    "time_to_resolve_minutes": 20,
+    "engineer_name": "alex-devops",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "direct-memory", "netty-leak"],
+    "description": "Direct memory buffer leak."
+  },
+  {
+    "id": "INC-1023",
+    "timestamp": "2026-09-28T12:15:00Z",
+    "service": "order-service",
+    "severity": "P2-HIGH",
+    "alert_text": "OrderServicePoolTimeout - HikariPool connection timeout",
+    "logs": [
+      "2026-09-28T12:14:30.000Z [http-nio-8080-exec-9] ERROR com.zaxxer.hikari.pool.HikariPool - Connection is not available after 30000ms"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 320000000,
+      "memory_limit_bytes": 536870912,
+      "cpu_percent": 60.0,
+      "kafka_lag": 0,
+      "p99_latency_ms": 30000.0,
+      "gc_pause_ms": 40.0,
+      "active_threads": 140,
+      "connection_pool_active": 20,
+      "connection_pool_max": 20
+    },
+    "deploy_events": [],
+    "root_cause": "Order service database pool exhausted during flash checkout burst.",
+    "recommended_fix": "Increase max pool size from 20 to 45.",
+    "time_to_resolve_minutes": 10,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["order-service", "hikaripool", "connection-timeout"],
+    "description": "Order service pool timeout."
+  },
+  {
+    "id": "INC-1024",
+    "timestamp": "2026-09-28T13:00:00Z",
+    "service": "payment-service",
+    "severity": "P1-CRITICAL",
+    "alert_text": "PaymentServiceOOMKilled - Pod memory limit exceeded (765Mi/768Mi)",
+    "logs": [
+      "2026-09-28T12:59:45.000Z [batch-executor-1] ERROR com.fintech.payment.Worker - java.lang.OutOfMemoryError: Java heap space",
+      "2026-09-28T12:59:58.000Z [kubelet] Pod payment-service killed exit code 137 (OOMKilled)"
+    ],
+    "metrics": {
+      "memory_rss_bytes": 803000000,
+      "memory_limit_bytes": 805306368,
+      "cpu_percent": 92.0,
+      "kafka_lag": 5600,
+      "p99_latency_ms": 1500.0,
+      "gc_pause_ms": 2.1,
+      "active_threads": 130,
+      "connection_pool_active": 14,
+      "connection_pool_max": 25
+    },
+    "deploy_events": [
+      {
+        "commit_hash": "f9024bc",
+        "author": "mike-senior-dev",
+        "message": "fix(batch): test PAYMENT_BATCH_SIZE=4000",
+        "timestamp": "2026-09-28T12:40:00Z",
+        "config_changes": {
+          "PAYMENT_BATCH_SIZE": 4000
+        }
+      }
+    ],
+    "root_cause": "Deploy commit f9024bc raised batch size to 4000. Agent recognizes learned pattern PAT-BATCH-OOM and requests approval gate.",
+    "recommended_fix": "Rollback PAYMENT_BATCH_SIZE to 1000 baseline per team policy.",
+    "time_to_resolve_minutes": 4,
+    "engineer_name": "sarah-oncall",
+    "outcome": "resolved",
+    "is_simulated": true,
+    "tags": ["payment-service", "oomkilled", "learned-pattern-verified"],
+    "description": "Mature agent verification: Instantly matches learned pattern PAT-BATCH-OOM in under 30ms."
+  }
+]
